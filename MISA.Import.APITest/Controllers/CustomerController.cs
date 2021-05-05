@@ -51,30 +51,39 @@ namespace MISA.Import.APITest.Controllers
                     for (int row = 3; row <= rowCount; row++)
                     {
                         Regex dateValidRegex = new Regex(@"^([0]?[1-9]|[1|2][0-9]|[3][0|1])[./-]([0]?[1-9]|[1][0-2])[./-]([0-9]{4}|[0-9]{2})$");
-                        Regex dateValidRegexWithTime = new Regex(@"^([0]?[1-9]|[1][0-2])[/]([0]?[1-9]|[1|2][0-9]|[3][0|1])[/]([0-9]{4}|[0-9]{2}) ([0]|[1])([0-9])[:]([0]|[1])([0-9])[:]([0]|[1])([0-9]) ([AM]|[PM])$");
+                        Regex dateValidRegexMonthAndYear = new Regex(@"([0]?[1-9]|[1][0-2])[./-]([0-9]{4}|[0-9]{2})$");
                         Regex yearValidRegex = new Regex(@"([0-9]{4}|[0-9]{2})$");
-                        var dateString = worksheet.Cells[row, 6].Value.ToString();
-                        DateTime dateReturn;
-                        if (dateValidRegex.IsMatch(dateString))
+                        DateTime dateReturn = DateTime.Now;
+                        var dateString = "";
+                        if (worksheet.Cells[row, 6].Value == null)
                         {
-                            var dateSplit = dateString.Split(new string[] { "/", ".", "-" }, StringSplitOptions.None);
-                            var day = int.Parse(dateSplit[0]);
-                            var month = int.Parse(dateSplit[1]);
-                            var year = int.Parse(dateSplit[2]);
-                            dateReturn = new DateTime(year, month, day);
+                            dateReturn = DateTime.Now;
                         }
-                        else if (yearValidRegex.IsMatch(dateString))
+                        else
                         {
-                            var year = int.Parse(dateString);
-                            dateReturn = new DateTime(year, 1, 1);
+                            dateString = worksheet.Cells[row, 6].Value.ToString();
+                            if (dateValidRegex.IsMatch(dateString))
+                            {
+                                var dateSplit = dateString.Split(new string[] { "/", ".", "-" }, StringSplitOptions.None);
+                                var day = int.Parse(dateSplit[0]);
+                                var month = int.Parse(dateSplit[1]);
+                                var year = int.Parse(dateSplit[2]);
+                                dateReturn = new DateTime(year, month, day);
+                            }
+                            else if (yearValidRegex.IsMatch(dateString))
+                            {
+                                var year = int.Parse(dateString);
+                                dateReturn = new DateTime(year, 1, 1);
+                            }
+                            else if (dateValidRegexMonthAndYear.IsMatch(dateString))
+                            {
+                                var dateSplit = dateString.Split(new string[] { "/", ".", "-" }, StringSplitOptions.None);
+                                var month = int.Parse(dateSplit[0]);
+                                var year = int.Parse(dateSplit[1]);
+                                dateReturn = new DateTime(year, month, 1);
+                            }
                         }
-                        else if (dateValidRegexWithTime.IsMatch(dateString))
-                        {
-                            dateReturn = new DateTime(int.Parse(dateString), 1, 1);
-                        }else if(dateString == null)
-                        {
-                            dateReturn = new DateTime(1970, 1, 1);
-                        }
+                        
                         
                         list.Add(new Customer
                         {
@@ -83,7 +92,7 @@ namespace MISA.Import.APITest.Controllers
                             MemberCardCode = (worksheet.Cells[row, 3].Value == null) ? "" : worksheet.Cells[row, 3].Value.ToString().Trim(),
                             CustomerGroupName = (worksheet.Cells[row, 4].Value == null) ? "" : worksheet.Cells[row, 4].Value.ToString().Trim(),
                             PhoneNumber = (worksheet.Cells[row, 5].Value == null) ? "" : worksheet.Cells[row, 5].Value.ToString().Trim(),
-                            DateOfBirth = (worksheet.Cells[row, 6].Value == null) ? "" : worksheet.Cells[row, 6].Value.ToString().Trim(),
+                            DateOfBirth = dateReturn,
                             //DateOfBirth = (!check && worksheet.Cells[row, 6].Value == null) ? DateTime.Now : dt,
                             CompanyName = (worksheet.Cells[row, 7].Value == null) ? "" : worksheet.Cells[row, 7].Value.ToString().Trim(),
                             CompanyTaxCode = (worksheet.Cells[row, 8].Value == null) ? "" : worksheet.Cells[row, 8].Value.ToString().Trim(),
@@ -92,6 +101,12 @@ namespace MISA.Import.APITest.Controllers
                             Note = (worksheet.Cells[row, 11].Value == null) ? "" : worksheet.Cells[row, 11].Value.ToString().Trim(),
                         });
                     }
+
+                    //var columnCount = worksheet.Dimension.Columns;
+                    //for (int col = 2; col <= columnCount; col++)
+                    //{
+
+                    //}
                 }
             }
 
@@ -100,6 +115,10 @@ namespace MISA.Import.APITest.Controllers
             var rowAffects = dbConnection.Execute(sql, list, commandType: CommandType.StoredProcedure);
             if(rowAffects > 0)
             {
+                //list.ForEach(item =>
+                //{
+                //    if(item.CustomerCode)
+                //});
                 return Ok(list);
             }
             return NoContent();
