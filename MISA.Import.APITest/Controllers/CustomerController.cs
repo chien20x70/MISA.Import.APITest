@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Data;
 using Dapper;
 using MySqlConnector;
+using System.Text.RegularExpressions;
 
 namespace MISA.Import.APITest.Controllers
 {
@@ -49,7 +50,32 @@ namespace MISA.Import.APITest.Controllers
                     var rowCount = worksheet.Dimension.Rows; 
                     for (int row = 3; row <= rowCount; row++)
                     {
-                        //var check = DateTime.TryParse(worksheet.Cells[row, 6].Value.ToString(), out DateTime dt);
+                        Regex dateValidRegex = new Regex(@"^([0]?[1-9]|[1|2][0-9]|[3][0|1])[./-]([0]?[1-9]|[1][0-2])[./-]([0-9]{4}|[0-9]{2})$");
+                        Regex dateValidRegexWithTime = new Regex(@"^([0]?[1-9]|[1][0-2])[/]([0]?[1-9]|[1|2][0-9]|[3][0|1])[/]([0-9]{4}|[0-9]{2}) ([0]|[1])([0-9])[:]([0]|[1])([0-9])[:]([0]|[1])([0-9]) ([AM]|[PM])$");
+                        Regex yearValidRegex = new Regex(@"([0-9]{4}|[0-9]{2})$");
+                        var dateString = worksheet.Cells[row, 6].Value.ToString();
+                        DateTime dateReturn;
+                        if (dateValidRegex.IsMatch(dateString))
+                        {
+                            var dateSplit = dateString.Split(new string[] { "/", ".", "-" }, StringSplitOptions.None);
+                            var day = int.Parse(dateSplit[0]);
+                            var month = int.Parse(dateSplit[1]);
+                            var year = int.Parse(dateSplit[2]);
+                            dateReturn = new DateTime(year, month, day);
+                        }
+                        else if (yearValidRegex.IsMatch(dateString))
+                        {
+                            var year = int.Parse(dateString);
+                            dateReturn = new DateTime(year, 1, 1);
+                        }
+                        else if (dateValidRegexWithTime.IsMatch(dateString))
+                        {
+                            dateReturn = new DateTime(int.Parse(dateString), 1, 1);
+                        }else if(dateString == null)
+                        {
+                            dateReturn = new DateTime(1970, 1, 1);
+                        }
+                        
                         list.Add(new Customer
                         {
                             CustomerCode = (worksheet.Cells[row, 1].Value == null) ? "" : worksheet.Cells[row, 1].Value.ToString().Trim(),
