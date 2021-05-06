@@ -102,7 +102,7 @@ namespace MISA.Import.APITest.Controllers
                             CustomerCode = (worksheet.Cells[row, 1].Value == null) ? "" : worksheet.Cells[row, 1].Value.ToString().Trim(),
                             FullName = (worksheet.Cells[row, 2].Value == null) ? "" : worksheet.Cells[row, 2].Value.ToString().Trim(),
                             MemberCardCode = (worksheet.Cells[row, 3].Value == null) ? "" : worksheet.Cells[row, 3].Value.ToString().Trim(),
-                            CustomerGroupId = null,
+                            CustomerGroupId = new Guid(),
                             CustomerGroupName = (worksheet.Cells[row, 4].Value == null) ? "" : worksheet.Cells[row, 4].Value.ToString().Trim(),
                             PhoneNumber = (worksheet.Cells[row, 5].Value == null) ? "" : worksheet.Cells[row, 5].Value.ToString().Trim(),
                             DateOfBirth = dateReturn,
@@ -120,6 +120,18 @@ namespace MISA.Import.APITest.Controllers
             // Duyệt tất cả khách hàng trong danh sách khách hàng
             foreach (Customer customer in customers)
             {
+                // Kiểm tra customerGroupName tồn tại hay không.
+                var customerGroup = CheckCustomerGroupExist(customer);
+                if (customerGroup == null)
+                {
+                    customer.CustomerGroupId = null;
+                    customer.Status = "";
+                    customer.Status += "Nhóm khách hàng không có trong hệ thống. ";
+                }
+                else
+                {
+                    customer.CustomerGroupId = customerGroup.CustomerGroupId;
+                }
                 // Kiểm tra tồn tại trong database
                 if (CheckPropertyExistDB("CustomerCode", customer.CustomerCode))
                 {
@@ -131,17 +143,7 @@ namespace MISA.Import.APITest.Controllers
                     customer.Status = "";
                     customer.Status += "SĐT đã có trong hệ thống. ";
                 }
-                // Kiểm tra customerGroupName tồn tại hay không.
-                var customerGroup = CheckCustomerGroupExist(customer);
-                if (customerGroup == null)
-                {
-                    customer.Status = "";
-                    customer.Status += "Nhóm khách hàng không có trong hệ thống. ";
-                }
-                else
-                {
-                    customer.CustomerGroupId = customerGroup.CustomerGroupId;
-                }
+                
             }
             // Kiểm tra trùng mã code và số điện thoại trên File
             for (int i = customers.Count - 1; i > 0; i--)
